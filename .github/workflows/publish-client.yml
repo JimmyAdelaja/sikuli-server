@@ -23,13 +23,13 @@ jobs:
           settings-servers: |
             [{
                 "id": "github",
-                "username": "${{ secrets.MVN_DEPLOY_USER }}",
-                "password": "${{ secrets.MVN_DEPLOY_KEY }}"
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
             },
             {
                 "id": "github-snapshots",
-                "username": "${{ secrets.MVN_DEPLOY_USER }}",
-                "password": "${{ secrets.MVN_DEPLOY_KEY }}"
+                "username": "${{ github.actor }}",
+                "password": "${{ secrets.GITHUB_TOKEN }}"
             }]
 
       - name: Publish to GitHub Packages
