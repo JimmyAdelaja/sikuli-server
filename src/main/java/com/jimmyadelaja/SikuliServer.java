@@ -41,10 +41,10 @@ public class SikuliServer {
    */
   @SuppressWarnings("unchecked")
   public static void main(String[] args) {
-    Javalin app = Javalin.create().start(7000);
+    Javalin app = Javalin.create(config -> {
 
     // --- Basic UI Actions ---
-    app.post(
+    config.routes.post(
         "/click-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -54,7 +54,7 @@ public class SikuliServer {
           ctx.result("Clicked at " + x + ", " + y);
         });
 
-    app.post(
+    config.routes.post(
         "/type",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -64,7 +64,7 @@ public class SikuliServer {
           ctx.result("Typed: " + text);
         });
 
-    app.post(
+    config.routes.post(
         "/clear",
         ctx -> {
           screen.type("a", Key.CTRL);
@@ -72,14 +72,14 @@ public class SikuliServer {
           ctx.result("Cleared");
         });
 
-    app.post(
+    config.routes.post(
         "/click",
         ctx -> {
           screen.click();
           ctx.result("Click");
         });
 
-    app.post(
+    config.routes.post(
         "/mouse-move-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -89,7 +89,7 @@ public class SikuliServer {
           ctx.result("Clicked at " + dx + ", " + dy);
         });
 
-    app.post(
+    config.routes.post(
         "/click-image",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -109,7 +109,7 @@ public class SikuliServer {
           }
         });
 
-    app.post(
+    config.routes.post(
         "/exists",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -123,7 +123,7 @@ public class SikuliServer {
           tempFile.delete();
         });
 
-    app.get(
+    config.routes.get(
         "/capture",
         ctx -> {
           try {
@@ -137,7 +137,7 @@ public class SikuliServer {
           }
         });
 
-    app.post(
+    config.routes.post(
         "/double-click-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -147,7 +147,7 @@ public class SikuliServer {
           ctx.result("Double-clicked at " + x + ", " + y);
         });
 
-    app.post(
+    config.routes.post(
         "/right-click-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -157,7 +157,7 @@ public class SikuliServer {
           ctx.result("Right-clicked at " + x + ", " + y);
         });
 
-    app.post(
+    config.routes.post(
         "/drag-drop",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -169,7 +169,7 @@ public class SikuliServer {
           ctx.result("Dragged from (" + fromX + "," + fromY + ") to (" + toX + "," + toY + ")");
         });
 
-    app.post(
+    config.routes.post(
         "/exists-text",
         ctx -> {
           screen.text();
@@ -180,7 +180,7 @@ public class SikuliServer {
           ctx.result(String.valueOf(match != null));
         });
 
-    app.post(
+    config.routes.post(
         "/find-text-click",
         ctx -> {
           screen.text();
@@ -197,7 +197,7 @@ public class SikuliServer {
           }
         });
 
-    app.post(
+    config.routes.post(
         "/hover-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -207,7 +207,7 @@ public class SikuliServer {
           ctx.result("Hovered at " + x + ", " + y);
         });
 
-    app.post(
+    config.routes.post(
         "/mouse-move",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -231,7 +231,7 @@ public class SikuliServer {
           }
         });
 
-    app.post(
+    config.routes.post(
         "/mouse-up",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -244,7 +244,7 @@ public class SikuliServer {
           ctx.result("Mouse " + button + " button up");
         });
 
-    app.post(
+    config.routes.post(
         "/mouse-down",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -257,7 +257,7 @@ public class SikuliServer {
           ctx.result("Mouse " + button + " button down");
         });
 
-    app.post(
+    config.routes.post(
         "/find-text-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -274,7 +274,7 @@ public class SikuliServer {
           ctx.json(coords);
         });
 
-    app.post(
+    config.routes.post(
         "/find-image-coords",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -294,7 +294,7 @@ public class SikuliServer {
           tempFile.delete();
         });
 
-    app.post(
+    config.routes.post(
         "/scroll",
         ctx -> {
           Map<String, Object> body = ctx.bodyAsClass(Map.class);
@@ -310,6 +310,8 @@ public class SikuliServer {
           }
           ctx.result("Scrolled dx=" + dx + ", dy=" + dy);
         });
+
+      }).start(7000);
   }
 
   private static File base64ToFile(String base64) throws Exception {
