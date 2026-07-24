@@ -1,0 +1,36 @@
+name: Publish Client Library
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+
+      - name: Setup maven
+        uses: s4u/setup-maven-action@v1.19.0
+        with:
+          java-version: 21
+          settings-servers: |
+            [{
+                "id": "github",
+                "username": "${{ secrets.MVN_DEPLOY_USER }}",
+                "password": "${{ secrets.MVN_DEPLOY_KEY }}"
+            },
+            {
+                "id": "github-snapshots",
+                "username": "${{ secrets.MVN_DEPLOY_USER }}",
+                "password": "${{ secrets.MVN_DEPLOY_KEY }}"
+            }]
+
+      - name: Publish to GitHub Packages
+        run: mvn deploy -DskipTests
