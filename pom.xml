@@ -4,7 +4,7 @@
 
   <groupId>com.jimmyadelaja</groupId>
   <artifactId>sikuli-server</artifactId>
-  <version>1.17</version>
+  <version>1.18</version>
 
   <distributionManagement>
     <repository>
