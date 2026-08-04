@@ -191,7 +191,7 @@ public class SikuliServer {
                         String text = (String) body.get("text");
                         Match match = findText(text, 0, getRegionFromBody(body));
                         if (match == null) {
-                          ctx.status(404).result("Image not found on screen");
+                          ctx.status(404).result("Text not found on screen");
                           return;
                         }
                         ctx.result(String.valueOf(match != null));
@@ -206,7 +206,7 @@ public class SikuliServer {
                         int index = (int) body.get("index");
                         Match match = findText(text, index, getRegionFromBody(body));
                         if (match == null) {
-                          ctx.status(404).result("Image not found on screen");
+                          ctx.status(404).result("Text not found on screen");
                           return;
                         }
                         screen.click(match);
