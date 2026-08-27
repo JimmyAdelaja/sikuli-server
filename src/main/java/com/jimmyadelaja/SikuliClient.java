@@ -14,14 +14,16 @@ import lombok.SneakyThrows;
 /**
  * Client for interacting with a remote SikuliServer instance over HTTP.
  *
- * <p>Provides an interface to execute GUI automation commands such as clicking, typing, capturing
+ * <p>
+ * Provides an interface to execute GUI automation commands such as clicking,
+ * typing, capturing
  * screens, and finding text or images on a remote server.
  */
 public class SikuliClient {
   private final String baseUrl;
   private final HttpClient httpClient;
   private final ObjectMapper objectMapper;
-  public static int waitInterval = 500; // In milliseconds
+  public int waitInterval = 100; // In milliseconds
 
   /**
    * Constructs a new SikuliClient configured to connect to a specific server.
@@ -39,18 +41,19 @@ public class SikuliClient {
    * Sends a JSON POST request to the specified endpoint on the server.
    *
    * @param endpoint the target API endpoint (e.g., "/click-coords")
-   * @param data a map containing key-value pairs representing the JSON payload
+   * @param data     a map containing key-value pairs representing the JSON
+   *                 payload
    * @return the raw string response body from the server
-   * @throws Exception if the network request fails or the server returns an error code (>= 400)
+   * @throws Exception if the network request fails or the server returns an error
+   *                   code (>= 400)
    */
   private String sendPost(String endpoint, Map<String, Object> data) throws Exception {
     String jsonBody = objectMapper.writeValueAsString(data);
-    HttpRequest request =
-        HttpRequest.newBuilder()
-            .uri(URI.create(baseUrl + endpoint))
-            .header("Content-Type", "application/json")
-            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
-            .build();
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(baseUrl + endpoint))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+        .build();
 
     HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
     if (response.statusCode() >= 400) {
@@ -75,7 +78,8 @@ public class SikuliClient {
   }
 
   /**
-   * Inputs text by selecting all current content in focus (Ctrl+A) and typing the new string.
+   * Inputs text by selecting all current content in focus (Ctrl+A) and typing the
+   * new string.
    *
    * @param text the sequence of characters to type
    * @return a server execution confirmation message
@@ -86,7 +90,8 @@ public class SikuliClient {
   }
 
   /**
-   * Clears text in the currently focused UI element by simulating Ctrl+A followed by Backspace.
+   * Clears text in the currently focused UI element by simulating Ctrl+A followed
+   * by Backspace.
    *
    * @return a server execution confirmation message
    */
@@ -118,7 +123,8 @@ public class SikuliClient {
   }
 
   /**
-   * Finds and clicks a visual asset on the screen using a Base64-encoded image snippet.
+   * Finds and clicks a visual asset on the screen using a Base64-encoded image
+   * snippet.
    *
    * @param req Request Object
    * @return a server execution confirmation message
@@ -147,8 +153,7 @@ public class SikuliClient {
    */
   @SneakyThrows
   public String capture() {
-    HttpRequest request =
-        HttpRequest.newBuilder().uri(URI.create(baseUrl + "/capture")).GET().build();
+    HttpRequest request = HttpRequest.newBuilder().uri(URI.create(baseUrl + "/capture")).GET().build();
     return httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
   }
 
@@ -181,8 +186,8 @@ public class SikuliClient {
    *
    * @param fromX starting x-coordinate
    * @param fromY starting y-coordinate
-   * @param toX destination x-coordinate
-   * @param toY destination y-coordinate
+   * @param toX   destination x-coordinate
+   * @param toY   destination y-coordinate
    * @return a server execution confirmation message
    */
   @SneakyThrows
@@ -193,7 +198,8 @@ public class SikuliClient {
   // --- Text Actions ---
 
   /**
-   * Checks whether the specified text string is visible anywhere on screen using OCR.
+   * Checks whether the specified text string is visible anywhere on screen using
+   * OCR.
    *
    * @param req Request Object
    * @return true if the text matches an element on screen, false otherwise
@@ -229,10 +235,11 @@ public class SikuliClient {
   }
 
   /**
-   * Moves the mouse linearly from the center of one identified image to the center of another.
+   * Moves the mouse linearly from the center of one identified image to the
+   * center of another.
    *
    * @param fromBase64 the source image encoded as a Base64 string
-   * @param toBase64 the destination image encoded as a Base64 string
+   * @param toBase64   the destination image encoded as a Base64 string
    * @return a server execution confirmation message
    */
   @SneakyThrows
@@ -244,7 +251,7 @@ public class SikuliClient {
    * Changes the state of a specific mouse button to pressed or released.
    *
    * @param direction the action to take ("mouse-up" or "mouse-down")
-   * @param button the target mouse button ("left", "right", or "middle")
+   * @param button    the target mouse button ("left", "right", or "middle")
    * @return a server execution confirmation message
    */
   @SneakyThrows
@@ -255,9 +262,10 @@ public class SikuliClient {
   }
 
   /**
-   * Blocks execution until an image matches a section of the screen or a timeout occurs.
+   * Blocks execution until an image matches a section of the screen or a timeout
+   * occurs.
    *
-   * @param req Request Object
+   * @param req     Request Object
    * @param timeout maximum wait time in seconds (0 means wait indefinitely)
    * @return a server execution confirmation message
    */
@@ -276,7 +284,7 @@ public class SikuliClient {
   /**
    * Blocks execution until the given text appears on screen or a timeout occurs.
    *
-   * @param req Request Object
+   * @param req     Request Object
    * @param timeout maximum wait time in seconds (0 means wait indefinitely)
    * @return a server execution confirmation message
    */
@@ -294,9 +302,10 @@ public class SikuliClient {
   }
 
   /**
-   * Blocks execution until a specific image disappears from the screen or a timeout occurs.
+   * Blocks execution until a specific image disappears from the screen or a
+   * timeout occurs.
    *
-   * @param req Request Object
+   * @param req     Request Object
    * @param timeout maximum wait time in seconds (0 means wait indefinitely)
    * @return a server execution confirmation message
    */
@@ -312,9 +321,10 @@ public class SikuliClient {
   }
 
   /**
-   * Blocks execution until a given string disappears from the screen or a timeout occurs.
+   * Blocks execution until a given string disappears from the screen or a timeout
+   * occurs.
    *
-   * @param req Request Object
+   * @param req     Request Object
    * @param timeout maximum wait time in seconds (0 means wait indefinitely)
    * @return a server execution confirmation message
    */
@@ -334,7 +344,8 @@ public class SikuliClient {
    * Retrieves the absolute center coordinates of a text string on the screen.
    *
    * @param req Request Object
-   * @return a Map containing keys "x" and "y" pointing to their respective pixel positions
+   * @return a Map containing keys "x" and "y" pointing to their respective pixel
+   *         positions
    */
   @SneakyThrows
   public Rectangle findTextCoords(Req req) {
@@ -342,10 +353,12 @@ public class SikuliClient {
   }
 
   /**
-   * Retrieves the absolute center coordinates of a visual asset matching the provided image.
+   * Retrieves the absolute center coordinates of a visual asset matching the
+   * provided image.
    *
    * @param req Request Object
-   * @return a Map containing keys "x" and "y" pointing to their respective pixel positions
+   * @return a Map containing keys "x" and "y" pointing to their respective pixel
+   *         positions
    */
   @SneakyThrows
   public Rectangle findImageCoords(Req req) {
@@ -365,41 +378,47 @@ public class SikuliClient {
   }
 
   /**
-   * Helper method that unpacks coordinates from a server POST response into a Map container.
+   * Helper method that unpacks coordinates from a server POST response into a Map
+   * container.
    *
    * @param endpoint target coordinate query endpoint
-   * @param data request payload parameters
+   * @param data     request payload parameters
    * @return a parsed Map containing spatial mappings for "x" and "y"
    */
   @SneakyThrows
   private Rectangle sendPostForCoords(String endpoint, Map<String, Object> data) {
     String response = sendPost(endpoint, data);
-    Map<String, Integer> coordsMap =
-        objectMapper.readValue(
-            response,
-            objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));
+    Map<String, Integer> coordsMap = objectMapper.readValue(
+        response,
+        objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));
 
     return new Rectangle(
         coordsMap.get("x"), coordsMap.get("y"), coordsMap.get("w"), coordsMap.get("h"));
   }
 
   /**
-   * Finds and clicks a visual asset on the screen using a Base64-encoded image snippet.
+   * Finds and clicks a visual asset on the screen using a Base64-encoded image
+   * snippet.
    *
    * @param base64Image the target image encoded as a Base64 string
-   * @param text the target text to locate
-   * @param index zero-based index targeting which match instance to click
-   * @param rec the rectangle for a region
+   * @param text        the target text to locate
+   * @param index       zero-based index targeting which match instance to click
+   * @param rec         the rectangle for a region
    * @return a server execution confirmation message
    */
   @Builder
   @Getter
   public static class Req {
-    @Builder.Default private final String base64Image = "";
-    @Builder.Default private final String text = "";
-    @Builder.Default private final float weight = 0.7f;
-    @Builder.Default private final int index = 0;
-    @Builder.Default private final Rectangle rec = new Rectangle();
+    @Builder.Default
+    private final String base64Image = "";
+    @Builder.Default
+    private final String text = "";
+    @Builder.Default
+    private final float weight = 0.7f;
+    @Builder.Default
+    private final int index = 0;
+    @Builder.Default
+    private final Rectangle rec = new Rectangle();
 
     private Map<String, Object> toMap() {
       return Map.of(
