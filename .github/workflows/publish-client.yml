@@ -47,13 +47,14 @@ jobs:
             --win-console `
             --dest dist
 
-      - name: Install warp-packer
-        run: cargo install warp-packer
-
       - name: Pack App Image into Single Portable EXE
         shell: powershell
         run: |
-          warp-packer `
+          # Download pre-built warp-packer executable from the official dgiagio/warp releases
+          Invoke-WebRequest -Uri "https://github.com/dgiagio/warp/releases/download/v0.3.0/windows-x64.warp-packer.exe" -OutFile "warp-packer.exe"
+
+          # Pack the app image into a single portable EXE
+          .\warp-packer.exe `
             --arch windows-x64 `
             --input_dir dist\SikuliServerApp `
             --exec SikuliServerApp.exe `
