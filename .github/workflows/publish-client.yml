@@ -37,10 +37,11 @@ jobs:
       - name: Create Java App Image with jpackage
         shell: powershell
         run: |
+          $JAR_FILE = (Get-ChildItem -Path target -Filter "*-jar-with-dependencies.jar" | Select-Object -First 1).Name
           jpackage `
             --name "SikuliServerApp" `
             --input target `
-            --main-jar sikuli-server-1.0-SNAPSHOT-jar-with-dependencies.jar `
+            --main-jar $JAR_FILE `
             --type app-image `
             --java-options "--enable-native-access=ALL-UNNAMED" `
             --win-console `
