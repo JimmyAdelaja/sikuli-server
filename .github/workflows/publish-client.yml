@@ -33,3 +33,36 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: mvn deploy -DskipTests
+
+      - name: Create Java App Image with jpackage
+        shell: powershell
+        run: |
+          jpackage `
+            --name "SikuliServerApp" `
+            --input target `
+            --main-jar sikuli-server-1.0-SNAPSHOT-jar-with-dependencies.jar `
+            --type app-image `
+            --java-options "--enable-native-access=ALL-UNNAMED" `
+            --win-console `
+            --dest dist
+
+      - name: Install warp-packer
+        run: cargo install warp-packer
+
+      - name: Pack App Image into Single Portable EXE
+        shell: powershell
+        run: |
+          warp-packer `
+            --arch windows-x64 `
+            --input_dir dist\SikuliServerApp `
+            --exec SikuliServerApp.exe `
+            --output target\SikuliServer.exe
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: target/SikuliServer.exe

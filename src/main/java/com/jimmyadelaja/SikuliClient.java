@@ -292,7 +292,7 @@ public class SikuliClient {
   public void waitText(Req req, double timeout) {
     double waitTime = 0;
     while (!existsText(req)) {
-      System.out.printf("[waitImage] Still waiting for text...\n");
+      System.out.printf("[waitText] Still waiting for text...\n");
       Thread.sleep(waitInterval);
       waitTime += .5;
       if (waitTime > timeout)
