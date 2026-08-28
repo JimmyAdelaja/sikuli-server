@@ -1,4 +1,4 @@
-name: Publish Client Library
+name: Publish Client Library & Release EXE
 
 on:
   push:
@@ -6,16 +6,16 @@ on:
       - main
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
+  publish-and-release:
+    runs-on: windows-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
-      - name: Setup maven
+      - name: Setup Maven & Java 21
         uses: s4u/setup-maven-action@v1.20.0
         with:
           java-version: 21
@@ -31,8 +31,8 @@ jobs:
                 "password": "${{ secrets.GITHUB_TOKEN }}"
             }]
 
-      - name: Publish to GitHub Packages
-        run: mvn deploy -DskipTests
+      - name: Build Fat JAR & Deploy Package
+        run: mvn clean deploy -DskipTests
 
       - name: Create Java App Image with jpackage
         shell: powershell
