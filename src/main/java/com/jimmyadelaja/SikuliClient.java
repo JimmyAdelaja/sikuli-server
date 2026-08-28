@@ -388,6 +388,9 @@ public class SikuliClient {
   @SneakyThrows
   private Rectangle sendPostForCoords(String endpoint, Map<String, Object> data) {
     String response = sendPost(endpoint, data);
+
+    if (response.contains("not found on screen")) throw new Exception(response);
+
     Map<String, Integer> coordsMap = objectMapper.readValue(
         response,
         objectMapper.getTypeFactory().constructMapType(Map.class, String.class, Integer.class));

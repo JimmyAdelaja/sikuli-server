@@ -46,7 +46,8 @@ public class SikuliServer {
    */
   @SuppressWarnings("unchecked")
   public static void main(String[] args) {
-    Javalin app = Javalin.create(
+    int waitIntervalMillis = 50;
+    Javalin.create(
         config -> {
 
           // --- Basic UI Actions ---
@@ -103,17 +104,23 @@ public class SikuliServer {
                 int index = (int) body.get("index");
                 float weight = (float) ((double) body.get("weight"));
                 File tempFile = base64ToFile(base64Image);
-                try {
-                  Pattern imagePattern = new Pattern(tempFile.getAbsolutePath()).similar(weight);
+                Pattern imagePattern = new Pattern(tempFile.getAbsolutePath()).similar(weight);
+
+                // Auto wait for 5 seconds
+                for (int wait = 0; getRegionFromBody(body).findAllList(imagePattern).isEmpty()
+                    && wait < 100; wait++) {
+                  Thread.sleep(waitIntervalMillis);
+                }
+
+                if (getRegionFromBody(body).findAllList(imagePattern).isEmpty()) {
+                  ctx.status(404).result("Image not found on screen");
+                } else {
                   screen.click(
                       getRegionFromBody(body).findAllList(imagePattern).get(index));
                   ctx.result("Image clicked successfully");
-                } catch (FindFailed e) {
-                  System.out.println("FindFailed: " + e.getMessage());
-                  ctx.status(404).result("Image not found on screen");
-                } finally {
-                  tempFile.delete();
                 }
+
+                tempFile.delete();
               });
 
           config.routes.post(
@@ -188,7 +195,7 @@ public class SikuliServer {
           config.routes.post(
               "/exists-text",
               ctx -> {
-                screen.text();
+                // screen.text();
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
                 String text = (String) body.get("text");
                 Match match = findText(text, 0, getRegionFromBody(body));
@@ -202,11 +209,18 @@ public class SikuliServer {
           config.routes.post(
               "/find-text-click",
               ctx -> {
-                screen.text();
+                // screen.text();
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
                 String text = (String) body.get("text");
                 int index = (int) body.get("index");
                 Match match = findText(text, index, getRegionFromBody(body));
+
+                // Auto wait for 5 seconds
+                for (int wait = 0; match == null && wait < 100; wait++) {
+                  Thread.sleep(waitIntervalMillis);
+                  match = findText(text, index, getRegionFromBody(body));
+                }
+
                 if (match == null) {
                   ctx.status(404).result("Text '%s' not found on screen".formatted(text));
                   return;
@@ -281,10 +295,18 @@ public class SikuliServer {
                 String text = (String) body.get("text");
                 int index = (int) body.get("index");
                 Match match = findText(text, index, getRegionFromBody(body));
+
+                // Auto wait for 5 seconds
+                for (int wait = 0; match == null && wait < 100; wait++) {
+                  Thread.sleep(waitIntervalMillis);
+                  match = findText(text, index, getRegionFromBody(body));
+                }
+
                 if (match == null) {
                   ctx.status(404).result("Text '%s' not found on screen".formatted(text));
                   return;
                 }
+
                 Map<String, Integer> coords = new java.util.HashMap<>();
                 coords.put("x", match.getX());
                 coords.put("y", match.getY());
@@ -302,15 +324,26 @@ public class SikuliServer {
                 float weight = (float) ((double) body.get("weight"));
                 File tempFile = base64ToFile(base64Image);
                 Pattern imagePattern = new Pattern(tempFile.getAbsolutePath()).similar(weight);
+
+                // Auto wait for 5 seconds
+                for (int wait = 0; getRegionFromBody(body).findAllList(imagePattern).isEmpty()
+                    && wait < 100; wait++) {
+                  Thread.sleep(waitIntervalMillis);
+                }
+
+                if (getRegionFromBody(body).findAllList(imagePattern).isEmpty()) {
+                  ctx.status(404).result("Image not found on screen");
+                  return;
+                }
+
                 Match match = getRegionFromBody(body).findAllList(imagePattern).get(index);
-                // Location center = match.getCenter();
                 Map<String, Integer> coords = new java.util.HashMap<>();
                 coords.put("x", match.getX());
                 coords.put("y", match.getY());
                 coords.put("w", match.getW());
                 coords.put("h", match.getH());
-                ctx.json(coords);
                 tempFile.delete();
+                ctx.json(coords);
               });
 
           config.routes.post(
