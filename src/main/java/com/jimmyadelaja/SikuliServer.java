@@ -199,10 +199,6 @@ public class SikuliServer {
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
                 String text = (String) body.get("text");
                 Match match = findText(text, 0, getRegionFromBody(body));
-                if (match == null) {
-                  ctx.status(404).result("Text '%s' not found on screen".formatted(text));
-                  return;
-                }
                 ctx.result(String.valueOf(match != null));
               });
 
