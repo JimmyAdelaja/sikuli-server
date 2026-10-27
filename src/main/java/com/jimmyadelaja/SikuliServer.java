@@ -385,14 +385,14 @@ public class SikuliServer {
   private static Match findText(String text, int index, Region region) {
     List<Match> matches = new ArrayList<>();
     String[] tokenizedText = text.split(" ");
+    String[] ocrWords = getOcrWords(region);
+
     if (tokenizedText.length == 1) {
-      matches = region.findWords(tokenizedText[0]);
-      // matches = region.findAllText(tokenizedText[0]);
+      matches = findWordsFuzzy(region, tokenizedText[0], ocrWords);
     } else {
       Map<String, List<Match>> allTokenizedMatches = new HashMap<>();
       for (String token : tokenizedText) {
-        allTokenizedMatches.put(token, region.findWords(token));
-        // allTokenizedMatches.put(token, region.findAllText(token));
+        allTokenizedMatches.put(token, findWordsFuzzy(region, token, ocrWords));
       }
       int xWordTolerance = 60;
       int yWordTolerance = 8;
@@ -438,5 +438,88 @@ public class SikuliServer {
       }
     }
     return matches.isEmpty() ? null : matches.get(index);
+  }
+
+  /**
+   * Returns OCR words currently visible in the region, via {@link Region#text()}.
+   */
+  private static String[] getOcrWords(Region region) {
+    String ocrText = region.text();
+    if (ocrText == null || ocrText.isBlank()) {
+      return new String[0];
+    }
+    return ocrText.trim().split("\\s+");
+  }
+
+  /**
+   * Finds word matches for {@code token}, also trying any on-screen OCR words within
+   * a Levenshtein distance of 2 (so OCR misreads like "Subrnit" still match "Submit").
+   */
+  private static List<Match> findWordsFuzzy(Region region, String token, String[] ocrWords) {
+    List<Match> matches = new ArrayList<>();
+    List<String> candidates = new ArrayList<>();
+    candidates.add(token);
+
+    String normalizedToken = token.toLowerCase();
+    for (String ocrWord : ocrWords) {
+      if (ocrWord.isEmpty()) {
+        continue;
+      }
+      if (editDistance(normalizedToken, ocrWord.toLowerCase()) <= 2
+          && candidates.stream().noneMatch(c -> c.equalsIgnoreCase(ocrWord))) {
+        candidates.add(ocrWord);
+        System.out.printf(
+            "[Fuzzy]: '%s' close to OCR word '%s' (distance <= 2)\n", token, ocrWord);
+      }
+    }
+
+    for (String candidate : candidates) {
+      List<Match> found = region.findWords(candidate);
+      if (found != null) {
+        matches.addAll(found);
+      }
+    }
+    return dedupeMatchesByPosition(matches);
+  }
+
+  /** Drops duplicate matches that share the same screen rectangle. */
+  private static List<Match> dedupeMatchesByPosition(List<Match> matches) {
+    List<Match> unique = new ArrayList<>();
+    for (Match match : matches) {
+      boolean alreadyPresent = false;
+      for (Match existing : unique) {
+        if (existing.getX() == match.getX()
+            && existing.getY() == match.getY()
+            && existing.getW() == match.getW()
+            && existing.getH() == match.getH()) {
+          alreadyPresent = true;
+          break;
+        }
+      }
+      if (!alreadyPresent) {
+        unique.add(match);
+      }
+    }
+    return unique;
+  }
+
+  /** Levenshtein edit distance between two strings. */
+  private static int editDistance(String a, String b) {
+    int[][] dp = new int[a.length() + 1][b.length() + 1];
+    for (int i = 0; i <= a.length(); i++) {
+      dp[i][0] = i;
+    }
+    for (int j = 0; j <= b.length(); j++) {
+      dp[0][j] = j;
+    }
+    for (int i = 1; i <= a.length(); i++) {
+      for (int j = 1; j <= b.length(); j++) {
+        int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+        dp[i][j] = Math.min(
+            Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
+            dp[i - 1][j - 1] + cost);
+      }
+    }
+    return dp[a.length()][b.length()];
   }
 }
