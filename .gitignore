@@ -35,3 +35,4 @@ spire-docker/*war
 /docker-compose/*/disk/
 /docker-compose/*/spire-elastic/
 /docker-compose/*/spire-postgres/
+.zed/
