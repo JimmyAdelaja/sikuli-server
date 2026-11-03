@@ -40,15 +40,17 @@ jobs:
       - name: Create Java App Image with jpackage
         shell: powershell
         run: |
-          $JAR_FILE = (Get-ChildItem -Path target -Filter "*-jar-with-dependencies.jar" | Select-Object -First 1).Name
           jpackage `
             --name "SikuliServerApp" `
             --input target `
-            --main-jar $JAR_FILE `
+            --main-jar target/sikuli-server-1.${{ github.run_number }}-jar-with-dependencies.jar `
             --type app-image `
             --java-options "--enable-native-access=ALL-UNNAMED" `
             --win-console `
             --dest dist
+
+          echo "Results"
+          ls
 
       - name: Pack App Image into Single Portable EXE
         shell: powershell
@@ -70,4 +72,7 @@ jobs:
           name: Release v1.${{ github.run_number }}
           draft: false
           prerelease: false
-          files: target/SikuliServer.exe
+          files: |
+            target/SikuliServer.exe
+            SikuliServerApp.exe
+            target/sikuli-server-1.${{ github.run_number }}-jar-with-dependencies.jar
