@@ -45,7 +45,7 @@ jobs:
           jpackage `
             --name "SikuliServerApp" `
             --input target `
-            --main-jar target/sikuli-server-1.${{ github.run_number }}-jar-with-dependencies.jar `
+            --main-jar sikuli-server-1.${{ github.run_number }}-jar-with-dependencies.jar `
             --type app-image `
             --java-options "--enable-native-access=ALL-UNNAMED" `
             --win-console `
