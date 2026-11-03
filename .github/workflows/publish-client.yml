@@ -54,7 +54,8 @@ jobs:
           echo "Results"
           ls
           ls dist
-          ls dist\bin
+          ls dist\SikuliServerApp
+          ls dist\SikuliServerApp\bin
 
       - name: Pack App Image into Single Portable EXE
         shell: powershell
@@ -78,5 +79,5 @@ jobs:
           prerelease: false
           files: |
             target/SikuliServer.exe
-            dist/bin/SikuliServerApp.exe
+            dist/SikuliServerApp/bin/SikuliServerApp.exe
             target/sikuli-server-1.${{ github.run_number }}-jar-with-dependencies.jar
