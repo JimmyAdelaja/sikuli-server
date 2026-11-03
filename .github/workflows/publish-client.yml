@@ -32,7 +32,7 @@ jobs:
             }]
 
       - name: Set Maven version from run number
-        run: mvn versions:set -DnewVersion=1.0.${{ github.run_number }} -DgenerateBackupPoms=false
+        run: mvn versions:set -DnewVersion=1.${{ github.run_number }} -DgenerateBackupPoms=false
 
       - name: Package JAR
         run: mvn clean deploy -DskipTests
