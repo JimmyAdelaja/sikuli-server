@@ -35,11 +35,13 @@ jobs:
         run: mvn versions:set "-DnewVersion=1.${{ github.run_number }}" "-DgenerateBackupPoms=false"
 
       - name: Package JAR
-        run: mvn clean deploy -DskipTests
+        run: mvn clean package deploy -DskipTests
 
       - name: Create Java App Image with jpackage
         shell: powershell
         run: |
+          ls target
+
           jpackage `
             --name "SikuliServerApp" `
             --input target `
