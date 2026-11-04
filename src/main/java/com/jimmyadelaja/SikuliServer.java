@@ -195,7 +195,6 @@ public class SikuliServer {
           config.routes.post(
               "/exists-text",
               ctx -> {
-                // screen.text();
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
                 String text = (String) body.get("text");
                 Match match = findText(text, 0, getRegionFromBody(body));
@@ -205,7 +204,6 @@ public class SikuliServer {
           config.routes.post(
               "/find-text-click",
               ctx -> {
-                // screen.text();
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
                 String text = (String) body.get("text");
                 int index = (int) body.get("index");
@@ -287,7 +285,6 @@ public class SikuliServer {
               "/find-text-coords",
               ctx -> {
                 Map<String, Object> body = ctx.bodyAsClass(Map.class);
-                System.out.println(screen.text());
                 String text = (String) body.get("text");
                 int index = (int) body.get("index");
                 Match match = findText(text, index, getRegionFromBody(body));
@@ -382,104 +379,154 @@ public class SikuliServer {
     return screen.newRegion(recX, recY, recW == 0 ? screen.w : recW, recH == 0 ? screen.h : recH);
   }
 
-  private static Match findText(String text, int index, Region region) {
-    List<Match> matches = new ArrayList<>();
-    String[] tokenizedText = text.split(" ");
-    String[] ocrWords = getOcrWords(region);
-
-    if (tokenizedText.length == 1) {
-      matches = findWordsFuzzy(region, tokenizedText[0], ocrWords);
-    } else {
-      Map<String, List<Match>> allTokenizedMatches = new HashMap<>();
-      for (String token : tokenizedText) {
-        allTokenizedMatches.put(token, findWordsFuzzy(region, token, ocrWords));
-      }
-      int xWordTolerance = 60;
-      int yWordTolerance = 8;
-
-      System.out.printf(
-          "[Log]: First matches: %s\n", allTokenizedMatches.get(tokenizedText[0]).size());
-      for (Match first : allTokenizedMatches.get(tokenizedText[0])) {
-        boolean potentialMatch = true;
-        int xExpected = first.getX() + first.getW() + 2;
-        for (int i = 1; i < tokenizedText.length; i++) {
-          int pMatches = allTokenizedMatches.get(tokenizedText[i]).size();
-          System.out.printf(
-              "\t[Inner Next Log]: '%s', matches: %s, xExpected: %s, first.getY(): %s\n",
-              tokenizedText[i],
-              allTokenizedMatches.get(tokenizedText[i]).size(),
-              xExpected,
-              first.getY());
-          for (Match next : allTokenizedMatches.get(tokenizedText[i])) {
-            System.out.printf(
-                "\t\t[Inner Next Log values]: next.getX(): %s, next.getY(): %s\n",
-                next.getX(), next.getY());
-            // ensure this next is within the expected x tolerance
-            if (next.getX() >= xExpected - xWordTolerance
-                && next.getX() <= xExpected + xWordTolerance
-                // ensure this next are on the same line
-                && next.getY() >= first.getY() - yWordTolerance
-                && next.getY() <= first.getY() + yWordTolerance) {
-              xExpected = next.getX() + next.getW() + 2;
-            } else {
-              pMatches--;
-            }
-          }
-
-          if (pMatches == 0) { // None of the found next words were close
-            System.out.printf("\t[Inner Next Log - Final]: no matches within tolerance\n");
-            potentialMatch = false;
-            break;
-          }
-        }
-
-        if (potentialMatch)
-          matches.add(first);
-      }
-    }
-    return matches.isEmpty() ? null : matches.get(index);
-  }
+  private static final int X_WORD_TOLERANCE = 60;
+  private static final int Y_WORD_TOLERANCE = 8;
+  private static final int MAX_EDIT_DISTANCE = 2;
 
   /**
-   * Returns OCR words currently visible in the region, via {@link Region#text()}.
+   * Locates {@code text} in {@code region} by first reading OCR once via {@link Region#text()},
+   * fuzzy-matching the query against that string, then resolving on-screen positions only for
+   * matched OCR words. Multi-word hits must also sit within the configured x/y tolerances.
    */
-  private static String[] getOcrWords(Region region) {
+  private static Match findText(String text, int index, Region region) {
+    if (text == null || text.isBlank() || index < 0) {
+      return null;
+    }
+
     String ocrText = region.text();
     if (ocrText == null || ocrText.isBlank()) {
-      return new String[0];
+      return null;
     }
-    return ocrText.trim().split("\\s+");
+
+    String[] queryWords = text.trim().split("\\s+");
+    String[] ocrWords = ocrText.trim().split("\\s+");
+    List<String[]> matchedSequences = findFuzzySequences(queryWords, ocrWords);
+    if (matchedSequences.isEmpty()) {
+      return null;
+    }
+
+    Map<String, List<Match>> wordLocations = new HashMap<>();
+    List<Match> phraseMatches = new ArrayList<>();
+
+    for (String[] sequence : matchedSequences) {
+      List<List<Match>> locationsPerWord = new ArrayList<>(sequence.length);
+      boolean incomplete = false;
+      for (String ocrWord : sequence) {
+        List<Match> locations =
+            wordLocations.computeIfAbsent(ocrWord, word -> locateWord(region, word));
+        if (locations.isEmpty()) {
+          incomplete = true;
+          break;
+        }
+        locationsPerWord.add(locations);
+      }
+      if (incomplete) {
+        continue;
+      }
+
+      if (sequence.length == 1) {
+        phraseMatches.addAll(locationsPerWord.get(0));
+      } else {
+        for (Match first : locationsPerWord.get(0)) {
+          if (areWordsSpatiallyChained(first, locationsPerWord)) {
+            phraseMatches.add(first);
+          }
+        }
+      }
+    }
+
+    List<Match> uniqueMatches = dedupeMatchesByPosition(phraseMatches);
+    if (index >= uniqueMatches.size()) {
+      return null;
+    }
+    return uniqueMatches.get(index);
   }
 
   /**
-   * Finds word matches for {@code token}, also trying any on-screen OCR words within
-   * a Levenshtein distance of 2 (so OCR misreads like "Subrnit" still match "Submit").
+   * Finds consecutive OCR-word windows that fuzzy-match {@code queryWords} (exact containment when
+   * edit distance is 0; OCR typos accepted up to {@link #MAX_EDIT_DISTANCE}).
    */
-  private static List<Match> findWordsFuzzy(Region region, String token, String[] ocrWords) {
-    List<Match> matches = new ArrayList<>();
-    List<String> candidates = new ArrayList<>();
-    candidates.add(token);
-
-    String normalizedToken = token.toLowerCase();
-    for (String ocrWord : ocrWords) {
-      if (ocrWord.isEmpty()) {
-        continue;
-      }
-      if (editDistance(normalizedToken, ocrWord.toLowerCase()) <= 2
-          && candidates.stream().noneMatch(c -> c.equalsIgnoreCase(ocrWord))) {
-        candidates.add(ocrWord);
-        System.out.printf(
-            "[Fuzzy]: '%s' close to OCR word '%s' (distance <= 2)\n", token, ocrWord);
-      }
+  private static List<String[]> findFuzzySequences(String[] queryWords, String[] ocrWords) {
+    List<String[]> sequences = new ArrayList<>();
+    if (queryWords.length == 0 || queryWords.length > ocrWords.length) {
+      return sequences;
     }
 
-    for (String candidate : candidates) {
-      List<Match> found = region.findWords(candidate);
-      if (found != null) {
-        matches.addAll(found);
+    for (int start = 0; start <= ocrWords.length - queryWords.length; start++) {
+      String[] captured = new String[queryWords.length];
+      boolean matched = true;
+      for (int i = 0; i < queryWords.length; i++) {
+        String queryWord = normalizeWord(queryWords[i]);
+        String ocrWord = normalizeWord(ocrWords[start + i]);
+        if (queryWord.isEmpty()
+            || ocrWord.isEmpty()
+            || editDistance(queryWord, ocrWord) > MAX_EDIT_DISTANCE) {
+          matched = false;
+          break;
+        }
+        captured[i] = stripEdgePunctuation(ocrWords[start + i]);
+      }
+      if (matched) {
+        sequences.add(captured);
       }
     }
-    return dedupeMatchesByPosition(matches);
+    return sequences;
+  }
+
+  /** Returns on-screen matches for a single OCR word form. */
+  private static List<Match> locateWord(Region region, String word) {
+    if (word == null || word.isBlank()) {
+      return List.of();
+    }
+    List<Match> found = region.findWords(word);
+    if (found == null || found.isEmpty()) {
+      return List.of();
+    }
+    return dedupeMatchesByPosition(found);
+  }
+
+  /**
+   * Walks subsequent word locations left-to-right from {@code first}, requiring each next word to
+   * land within {@link #X_WORD_TOLERANCE} / {@link #Y_WORD_TOLERANCE}.
+   */
+  private static boolean areWordsSpatiallyChained(Match first, List<List<Match>> locationsPerWord) {
+    int xExpected = first.getX() + first.getW() + 2;
+    int lineY = first.getY();
+
+    for (int i = 1; i < locationsPerWord.size(); i++) {
+      Match nearest = null;
+      int nearestDelta = Integer.MAX_VALUE;
+      for (Match next : locationsPerWord.get(i)) {
+        boolean withinX =
+            next.getX() >= xExpected - X_WORD_TOLERANCE
+                && next.getX() <= xExpected + X_WORD_TOLERANCE;
+        boolean withinY =
+            next.getY() >= lineY - Y_WORD_TOLERANCE && next.getY() <= lineY + Y_WORD_TOLERANCE;
+        if (!withinX || !withinY) {
+          continue;
+        }
+        int delta = Math.abs(next.getX() - xExpected) + Math.abs(next.getY() - lineY);
+        if (delta < nearestDelta) {
+          nearestDelta = delta;
+          nearest = next;
+        }
+      }
+      if (nearest == null) {
+        return false;
+      }
+      xExpected = nearest.getX() + nearest.getW() + 2;
+    }
+    return true;
+  }
+
+  /** Lowercases and strips leading/trailing punctuation for fuzzy comparisons. */
+  private static String normalizeWord(String word) {
+    return stripEdgePunctuation(word).toLowerCase();
+  }
+
+  private static String stripEdgePunctuation(String word) {
+    String stripped = word.replaceAll("^[^\\p{L}\\p{N}]+|[^\\p{L}\\p{N}]+$", "");
+    return stripped.isEmpty() ? word : stripped;
   }
 
   /** Drops duplicate matches that share the same screen rectangle. */
@@ -515,9 +562,9 @@ public class SikuliServer {
     for (int i = 1; i <= a.length(); i++) {
       for (int j = 1; j <= b.length(); j++) {
         int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-        dp[i][j] = Math.min(
-            Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
-            dp[i - 1][j - 1] + cost);
+        dp[i][j] =
+            Math.min(
+                Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1), dp[i - 1][j - 1] + cost);
       }
     }
     return dp[a.length()][b.length()];
