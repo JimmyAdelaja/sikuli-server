@@ -385,8 +385,9 @@ public class SikuliServer {
 
   /**
    * Locates {@code text} in {@code region} by first reading OCR once via {@link Region#text()},
-   * fuzzy-matching the query against that string, then resolving on-screen positions only for
-   * matched OCR words. Multi-word hits must also sit within the configured x/y tolerances.
+   * fuzzy-matching the query against that string, then resolving the on-screen position of the
+   * first word in each match (used as the click target). Spatial proximity between words is not
+   * checked.
    */
   private static Match findText(String text, int index, Region region) {
     if (text == null || text.isBlank() || index < 0) {
@@ -409,30 +410,10 @@ public class SikuliServer {
     List<Match> phraseMatches = new ArrayList<>();
 
     for (String[] sequence : matchedSequences) {
-      List<List<Match>> locationsPerWord = new ArrayList<>(sequence.length);
-      boolean incomplete = false;
-      for (String ocrWord : sequence) {
-        List<Match> locations =
-            wordLocations.computeIfAbsent(ocrWord, word -> locateWord(region, word));
-        if (locations.isEmpty()) {
-          incomplete = true;
-          break;
-        }
-        locationsPerWord.add(locations);
-      }
-      if (incomplete) {
-        continue;
-      }
-
-      if (sequence.length == 1) {
-        phraseMatches.addAll(locationsPerWord.get(0));
-      } else {
-        for (Match first : locationsPerWord.get(0)) {
-          if (areWordsSpatiallyChained(first, locationsPerWord)) {
-            phraseMatches.add(first);
-          }
-        }
-      }
+      String firstWord = sequence[0];
+      List<Match> locations =
+          wordLocations.computeIfAbsent(firstWord, word -> locateWord(region, word));
+      phraseMatches.addAll(locations);
     }
 
     List<Match> uniqueMatches = dedupeMatchesByPosition(phraseMatches);
