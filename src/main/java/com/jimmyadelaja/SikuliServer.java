@@ -381,7 +381,7 @@ public class SikuliServer {
 
   private static final int X_WORD_TOLERANCE = 60;
   private static final int Y_WORD_TOLERANCE = 8;
-  private static final int MAX_EDIT_DISTANCE = 2;
+  private static final int MAX_EDIT_DISTANCE = 1;
 
   /**
    * Locates {@code text} in {@code region} by first reading OCR once via {@link Region#text()},
