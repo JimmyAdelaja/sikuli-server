@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/25-migrate-to-oculix
 
 jobs:
   publish-and-release:
@@ -40,8 +41,6 @@ jobs:
       - name: Create Java App Image with jpackage
         shell: powershell
         run: |
-          ls target
-
           jpackage `
             --name "SikuliServerApp" `
             --input target `
@@ -50,13 +49,6 @@ jobs:
             --java-options "--enable-native-access=ALL-UNNAMED" `
             --win-console `
             --dest dist
-
-          echo "Results"
-          ls
-          ls dist
-          ls dist\SikuliServerApp
-          ls dist\SikuliServerApp\app
-          ls dist\SikuliServerApp\runtime
 
       - name: Pack App Image into Single Portable EXE
         shell: powershell
